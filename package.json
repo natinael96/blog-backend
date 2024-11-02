@@ -11,6 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.4",
     "body-parser": "^1.20.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -20,7 +21,8 @@
     "express-validator": "^7.2.0",
     "google-auth-library": "^9.14.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.7.3"
+    "mongoose": "^8.7.3",
+    "shortid": "^2.2.16"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"
