@@ -11,7 +11,7 @@ import { errorHandler } from '../middleware/errorHandler'; // Assuming you have 
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Pre-sign up (Send activation link)
+// pre-sign up  and send activation link
 exports.preSignUp = (req, res) => {
     const { name, email, password } = req.body;
     
@@ -49,7 +49,7 @@ exports.preSignUp = (req, res) => {
     });
 };
 
-// Sign up (Complete the signup after activation link is clicked)
+// Sign up - after activation link is clicked
 exports.SignUp = (req, res) => {
     const { token } = req.body;
     if (token) {
@@ -90,7 +90,7 @@ exports.SignUp = (req, res) => {
     }
 };
 
-// Sign in
+// log in
 exports.SignIn = (req, res) => {
     const { email, password } = req.body;
     User.findOne({ email }).exec((err, user) => {
@@ -119,7 +119,7 @@ exports.SignIn = (req, res) => {
     });
 };
 
-// Sign out
+// sign out
 exports.SignOut = (req, res) => {
     res.clearCookie('token');
     return res.json({
@@ -127,7 +127,7 @@ exports.SignOut = (req, res) => {
     });
 };
 
-// Middleware to require sign-in
+// middleware to require sign-in
 exports.requireSignIn = expressJWT({
     secret: process.env.JWT_SECRET,
     algorithms: ['HS256'],
@@ -147,7 +147,7 @@ exports.authmiddleware = (req, res, next) => {
 };
 
 // Admin middleware
-exports.adminmiddleware = (req, res, next) => {
+exports.admin_middleware = (req, res, next) => {
     const adminUserId = req.user._id;
     User.findById(adminUserId).exec((err, user) => {
         if (err || !user || user.role !== 1) {
@@ -209,8 +209,9 @@ exports.resetPassword = (req, res) => {
             if (err) {
                 return res.status(400).json({ error: 'Expired link. Try again.' });
             }
-
-            User.findOne({ resetPasswordLink }).exec((err, user) => {
+             
+            // 
+            User.findOne({ resetPasswordLink }).exec((err, user) => { 
                 if (err || !user) {
                     return res.status(400).json({ error: 'Invalid link. Try again.' });
                 }
@@ -261,4 +262,54 @@ exports.canUpdateAndDelete = (req, res, next) => {
         }
         next();
     });
+};
+
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+exports.googleLogin = async (req, res) => {
+    const { tokenId } = req.body;
+
+    try {
+        const response = await client.verifyIdToken({ idToken: tokenId, audience: process.env.GOOGLE_CLIENT_ID });
+        const { email_verified, name, email, jti } = response.payload;
+
+        if (email_verified) {
+            // Check if the user already exists
+            const user = await User.findOne({ email }).exec();
+
+            if (user) {
+                // User exists, generate a token
+                const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET,);
+                res.cookie('token', token, { expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }); // Set cookie expiration
+                const { _id, role, username } = user;
+
+                return res.json({
+                    token,
+                    user: { _id, email, name, role, username },
+                });
+            } else {
+                // Create a new user if it does not exist
+                const username = shortid.generate();
+                const profile = `${process.env.CLIENT_URL}/profile/${username}`;
+                const password = jti; // Using jti as a placeholder for password
+
+                const newUser = new User({ name, email, profile, username, password });
+                const savedUser = await newUser.save();
+
+                const token = jwt.sign({ _id: savedUser._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+                res.cookie('token', token, { expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }); // Set cookie expiration
+
+                const { _id, role } = savedUser;
+                return res.json({
+                    token,
+                    user: { _id, email, name, role, username },
+                });
+            }
+        } else {
+            return res.status(400).json({ error: 'Google login failed, try again' });
+        }
+    } catch (error) {
+        return res.status(400).json({ error: errorHandler(error) });
+    }
 };
