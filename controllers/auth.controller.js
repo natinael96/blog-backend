@@ -267,7 +267,7 @@ exports.canUpdateAndDelete = (req, res, next) => {
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-exports.googleLogin = async (req, res) => {
+exports.oauth = async (req, res) => {
     const { tokenId } = req.body;
 
     try {
@@ -292,7 +292,7 @@ exports.googleLogin = async (req, res) => {
                 // Create a new user if it does not exist
                 const username = shortid.generate();
                 const profile = `${process.env.CLIENT_URL}/profile/${username}`;
-                const password = jti; // Using jti as a placeholder for password
+                const password = jti; // jti as a placeholder for password
 
                 const newUser = new User({ name, email, profile, username, password });
                 const savedUser = await newUser.save();
