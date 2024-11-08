@@ -7,7 +7,7 @@ import shortid from 'shortid';
 import bcrypt from 'bcrypt';
 import sgMail from '@sendgrid/mail';
 import _ from 'lodash';
-import { errorHandler } from '../middleware/errorHandler'; // Assuming you have a custom error handler module
+import { errorHandler } from '../middleware/errorHandler'; 
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
